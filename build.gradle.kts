@@ -3,7 +3,7 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.9.0" apply false
+    kotlin("jvm") version "1.9.24" apply false
     id("org.jetbrains.dokka") version "+" apply false
     id("com.gradle.plugin-publish") version "+" apply false
     id("com.github.gmazzo.buildconfig") version "+" apply false
@@ -11,7 +11,7 @@ plugins {
 
 allprojects {
     group = "com.aleksa.constants"
-    version = "0.1.0-SNAPSHOT"
+    version = "0.1.0"
 }
 
 subprojects {

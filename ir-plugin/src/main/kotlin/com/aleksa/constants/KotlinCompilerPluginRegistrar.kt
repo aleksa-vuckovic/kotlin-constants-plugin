@@ -1,7 +1,7 @@
-package org.example.com.aleksa.constants
+package com.aleksa.constants
 
-import com.aleksa.constants.KotlinCommandLineProcessor
 import com.google.auto.service.AutoService
+import com.aleksa.constants.KotlinIrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector

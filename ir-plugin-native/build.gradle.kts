@@ -15,7 +15,7 @@ dependencies {
 
 tasks.named("compileKotlin") { dependsOn("syncSource") }
 tasks.register<Sync>("syncSource") {
-    from(project(":kotlin-ir-plugin").sourceSets.main.get().allSource)
+    from(project(":ir-plugin").sourceSets.main.get().allSource)
     into("src/main/kotlin")
     filter {
         // Replace shadowed imports from plugin module
@@ -24,8 +24,4 @@ tasks.register<Sync>("syncSource") {
             else -> it
         }
     }
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
 }

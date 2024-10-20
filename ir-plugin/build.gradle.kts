@@ -1,4 +1,4 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     kotlin("jvm")
@@ -22,6 +22,8 @@ buildConfig {
     buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"${rootProject.extra["kotlin_plugin_id"]}\"")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+tasks.test {
+    testLogging {
+        events(TestLogEvent.STANDARD_OUT, TestLogEvent.FAILED, TestLogEvent.PASSED)
+    }
 }

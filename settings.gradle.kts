@@ -5,3 +5,4 @@ rootProject.name = "Constants"
 include("ir-plugin")
 include("ir-plugin-gradle")
 include("ir-plugin-native")
+include("compile-test")

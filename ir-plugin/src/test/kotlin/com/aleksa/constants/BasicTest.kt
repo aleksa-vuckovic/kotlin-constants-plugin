@@ -2,7 +2,6 @@ package com.aleksa.constants
 
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
-import org.example.com.aleksa.constants.KotlinCompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import kotlin.test.assertEquals
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -34,7 +33,6 @@ fun compile(
 ): KotlinCompilation.Result {
     return KotlinCompilation().apply {
         sources = sourceFiles
-        useIR = true
         compilerPluginRegistrars = listOf(plugin)
         inheritClassPath = true
     }.compile()
