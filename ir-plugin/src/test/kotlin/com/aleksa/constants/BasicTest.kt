@@ -2,9 +2,9 @@ package com.aleksa.constants
 
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
-import org.example.com.aleksa.constants.KotlinComponentRegistrar
+import org.example.com.aleksa.constants.KotlinCompilerPluginRegistrar
+import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import kotlin.test.assertEquals
-import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.Test
 
@@ -30,12 +30,12 @@ fun debug() = "Hello, World!"
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
     sourceFiles: List<SourceFile>,
-    plugin: ComponentRegistrar = KotlinComponentRegistrar(),
+    plugin: CompilerPluginRegistrar = KotlinCompilerPluginRegistrar(),
 ): KotlinCompilation.Result {
     return KotlinCompilation().apply {
         sources = sourceFiles
         useIR = true
-        componentRegistrars = listOf(plugin)
+        compilerPluginRegistrars = listOf(plugin)
         inheritClassPath = true
     }.compile()
 }
@@ -43,7 +43,7 @@ fun compile(
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
     sourceFile: SourceFile,
-    plugin: ComponentRegistrar = KotlinComponentRegistrar(),
+    plugin: CompilerPluginRegistrar = KotlinCompilerPluginRegistrar(),
 ): KotlinCompilation.Result {
     return compile(listOf(sourceFile), plugin)
 }
