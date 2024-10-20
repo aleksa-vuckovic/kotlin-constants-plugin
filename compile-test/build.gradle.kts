@@ -2,9 +2,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
+    application
+}
+application {
+    mainClass.set("org.example.MainKt")
 }
 val pluginName = "ir-plugin"
 val plugin = project(":${pluginName}")
+val pluginJar = "${plugin.layout.buildDirectory.get()}/libs/${pluginName}-${plugin.version}.jar"
 dependencies {
     implementation(kotlin("stdlib"))
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -14,9 +19,10 @@ dependencies {
 
 tasks.withType<KotlinCompile> {
     dependsOn(":${pluginName}:assemble")
+    inputs.file(pluginJar)
     kotlinOptions {
         freeCompilerArgs += listOf(
-            "-Xplugin=${plugin.layout.buildDirectory.get()}/libs/${pluginName}-${plugin.version}.jar"
+            "-Xplugin=${pluginJar}"
         )
     }
 }
