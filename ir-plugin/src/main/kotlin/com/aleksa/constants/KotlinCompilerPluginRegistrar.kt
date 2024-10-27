@@ -8,36 +8,20 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KotlinCompilerPluginRegistrar(
-    private val defaultString: String,
-    private val defaultFile: String,
-    override val supportsK2: Boolean
+    val visitors: List<IrElementVisitorVoid>? = null,
+    override val supportsK2: Boolean = true
 ) : CompilerPluginRegistrar() {
 
     @Suppress("unused") // Used by service loader
-    constructor() : this(
-        defaultString = "Hello, World!",
-        defaultFile = "file.txt",
-        supportsK2 = true
-    )
+    constructor() : this(null, true)
 
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         val messageCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
-        val string = configuration.get(KotlinCommandLineProcessor.ARG_STRING, defaultString)
-        val file = configuration.get(KotlinCommandLineProcessor.ARG_FILE, defaultFile)
-        IrGenerationExtension.registerExtension(KotlinIrGenerationExtension(messageCollector, string, file))
+        IrGenerationExtension.registerExtension(KotlinIrGenerationExtension(messageCollector, visitors))
     }
-    /*
-    override fun registerProjectComponents(
-        project: MockProject,
-        configuration: CompilerConfiguration
-    ) {
-        val messageCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
-        val string = configuration.get(KotlinCommandLineProcessor.ARG_STRING, defaultString)
-        val file = configuration.get(KotlinCommandLineProcessor.ARG_FILE, defaultFile)
-        IrGenerationExtension.registerExtension(project, KotlinIrGenerationExtension(messageCollector, string, file))
-    }*/
 }

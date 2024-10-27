@@ -13,6 +13,7 @@ val pluginJar = "${plugin.layout.buildDirectory.get()}/libs/${pluginName}-${plug
 dependencies {
     implementation(kotlin("stdlib"))
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
     //compileOnly(plugin)
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.24")
 }

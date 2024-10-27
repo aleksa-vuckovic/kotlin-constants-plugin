@@ -7,6 +7,7 @@ plugins {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
     compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.24")
 
     kapt("com.google.auto.service:auto-service:1.0-rc7")

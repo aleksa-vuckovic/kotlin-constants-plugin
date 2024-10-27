@@ -1,7 +1,26 @@
 package org.example
 
-fun main() {
-    testLog()
+import kotlin.reflect.full.createType
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.javaType
+import java.time.*
+
+class A {
+    fun List<String>.hehe(count: Int) {}
+    fun f() {}
+}
+
+@OptIn(ExperimentalStdlibApi::class)
+fun main(x: Int) {
+    //testLog()
+    val a = A()
+    (if (x > 3) a else return).f()
+}
+/*
+fun dumpThis(): Int {
+    val x = 1 + 3
+    val y = 10
+    return x + y
 }
 
 fun testLog() {
@@ -22,3 +41,4 @@ fun testLog() {
     flambda()
 }
 
+*/

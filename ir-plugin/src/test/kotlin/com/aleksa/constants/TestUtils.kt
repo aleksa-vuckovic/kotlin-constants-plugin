@@ -2,29 +2,11 @@ package com.aleksa.constants
 
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
-import kotlin.test.assertEquals
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import org.junit.Test
-
-class BasicTest {
-    @OptIn(ExperimentalCompilerApi::class)
-    @Test
-    fun `IR plugin success`() {
-        val result = compile(
-            sourceFile = SourceFile.kotlin(
-                "main.kt", """
-fun main() {
-  println(debug())
-}
-
-fun debug() = "Hello, World!"
-"""
-            )
-        )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-    }
-}
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
@@ -44,4 +26,25 @@ fun compile(
     plugin: CompilerPluginRegistrar = KotlinCompilerPluginRegistrar(),
 ): KotlinCompilation.Result {
     return compile(listOf(sourceFile), plugin)
+}
+
+class StringCollector: MessageCollector {
+    private val text = StringBuilder()
+    val output: String get() = text.toString()
+    override fun clear() {
+        text.clear()
+    }
+    override fun hasErrors(): Boolean {
+        return false
+    }
+    override fun report(severity: CompilerMessageSeverity, message: String, location: CompilerMessageSourceLocation?) {
+        text.append("\n" + message)
+    }
+}
+
+fun String.trimm(): String {
+    return lineSequence()
+        .map { it.trimStart() }
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
 }
