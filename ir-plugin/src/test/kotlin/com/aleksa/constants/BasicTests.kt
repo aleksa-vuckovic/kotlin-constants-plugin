@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.name.SpecialNames
 import org.junit.Ignore
 import org.junit.Test
 
-@Ignore
+//@Ignore
 class BasicTest {
     @OptIn(ExperimentalCompilerApi::class)
     @Test
@@ -35,7 +35,7 @@ fun debug() = "Hello, World!"
     }
 }
 
-@Ignore
+//@Ignore
 @OptIn(ExperimentalCompilerApi::class)
 class UtilsTest {
 

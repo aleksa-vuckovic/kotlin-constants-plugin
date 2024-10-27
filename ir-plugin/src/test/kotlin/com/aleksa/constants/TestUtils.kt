@@ -7,6 +7,8 @@ import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.ir.IrStatement
+import org.jetbrains.kotlin.ir.util.dump
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
@@ -47,4 +49,17 @@ fun String.trimm(): String {
         .map { it.trimStart() }
         .filter { it.isNotBlank() }
         .joinToString("\n")
+}
+
+fun List<IrStatement>.dump(vararg indices: Any): String {
+    val result = StringBuilder()
+    for (index in indices) {
+        if (index is Int)
+            result.append(this[index].dump()).append("\n")
+        if (index is IntRange) {
+            for (i in index)
+                result.append(this[i].dump()).append("\n")
+        }
+    }
+    return result.toString()
 }

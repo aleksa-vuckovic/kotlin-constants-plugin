@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.ir.visitors.acceptVoid
  */
 class Evaluator(
     val messageCollector: MessageCollector? = null,
+    val throwOnUnevaluatedMethod: Boolean = false,
     val shouldEvaluate: (IrFunction) -> Boolean = {it.body != null && it !is IrConstructor},
 ): IrElementVisitor<Any?, Context> {
 
@@ -74,6 +75,7 @@ class Evaluator(
     }
 
     class EvaluationException(msg: String?) : Exception(msg)
+    class UnevaluatedMethodException(val method: IrFunction) : Exception()
 
     override fun visitElement(element: IrElement, data: Context): Any? {
         throw EvaluationException("Element type ${element} not supported.")
@@ -136,9 +138,9 @@ class Evaluator(
         //Lambda?
         if (func.kotlinFqName.asString().matches("""^kotlin.Function\d+.invoke$""".toRegex())) {
             //lambda invocation
-            val actualFunc = call.dispatchReceiver!!.accept(this, data) as? Pair<*, *> ?: return UnknownValue //TODO: There should be a way to make this an exception when using with Replacer
-            val lambda = actualFunc.first as? IrFunction ?: return UnknownValue
-            val lambdaContext = actualFunc.second as? Context ?: return UnknownValue
+            val actualFunc = call.dispatchReceiver!!.accept(this, data) as? Pair<*, *> ?: if (throwOnUnevaluatedMethod) throw UnevaluatedMethodException(func) else return UnknownValue
+            val lambda = actualFunc.first as? IrFunction ?: if (throwOnUnevaluatedMethod) throw UnevaluatedMethodException(func) else return UnknownValue
+            val lambdaContext = actualFunc.second as? Context ?: if (throwOnUnevaluatedMethod) throw UnevaluatedMethodException(func) else return UnknownValue
             val context = Context(lambda, lambdaContext)
             lambda.allParameters.map { it.symbol }.zip(args.drop(1)).forEach {
                 context[it.first] = it.second
@@ -148,15 +150,17 @@ class Evaluator(
         }
 
         if (!shouldEvaluate(func)) {
+            if (throwOnUnevaluatedMethod) throw UnevaluatedMethodException(func)
             if (func.body != null && func.isLocal)
                 data.removeAll(func.body?.assignedSymbols ?: setOf())
             return func.body.flowChanges - func.symbol //Might be an inlined lambda with a return targeting outer method
         }
         if (func.dispatchReceiverParameter != null) {
             //This is only allowed when the dispatch receiver is a singleton object
-            val clazz = func.dispatchReceiverParameter!!.type.getClass()
+            val type = func.dispatchReceiverParameter!!.type
+            val clazz = type.getClass()
             if (clazz == null || clazz.isLocal || !clazz.isObject)
-                return UnknownValue //TODO: There should be a way to make this an exception when using with Replacer
+                if (throwOnUnevaluatedMethod) throw UnevaluatedMethodException(func) else return UnknownValue
             return processCall(func, invocationContext(data.root))
         } else {
             //To facilitate local function definitions, find the appropriate parent context
@@ -292,16 +296,17 @@ class Evaluator(
             if (condition is FlowChange) return condition
             if (condition == false) break
 
-
             if (body != null) {
                 var result = body.accept(this, data)
+                say("Evaluation of while body")
                 if (result is PossibleFlowChange) {
-                    result -= loop
+                    say("Got possible flow change data is\n${data.dump()}")
+                    var ret = result - loop
                     data.removeAll(loop.condition.assignedSymbols)
-                    result += loop.condition.flowChanges
+                    ret += loop.condition.flowChanges
                     data.removeAll(body.assignedSymbols)
-                    result += body.flowChanges
-                    return result
+                    ret += body.flowChanges
+                    return ret
                 }
                 if (result is Continue && result.target == loop) continue
                 if (result is Break && result.target == loop) break
@@ -345,6 +350,11 @@ class Evaluator(
             return value
         data[expression.symbol] = value
         return value
+    }
+
+    override fun visitGetObjectValue(expression: IrGetObjectValue, data: Context): Any? {
+        //TODO: ?
+        return UnknownValue
     }
 
     override fun visitTypeOperator(expression: IrTypeOperatorCall, data: Context): Any? {

@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
@@ -20,7 +21,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 
-@Ignore
+//@Ignore
 class EvaluatorTests {
 
     @OptIn(ExperimentalCompilerApi::class)
@@ -359,5 +360,55 @@ class EvaluatorTests {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         assertEquals(2000, visitor.result1)
         assertEquals(13, visitor.result2)
+    }
+
+    @OptIn(ExperimentalCompilerApi::class)
+    @Test
+    fun `Singleton method and field`() {
+        val visitor = object: IrElementVisitorVoid {
+            val root: Context = Context()
+            val collector = StringCollector()
+            val evaluator = Evaluator(messageCollector = collector)
+            lateinit var method: IrFunction
+            var result: Any? = null
+
+            override fun visitElement(element: IrElement) {
+                element.acceptChildrenVoid(this)
+            }
+            override fun visitFunction(declaration: IrFunction) {
+                if (declaration.name.asString() == "main") {
+                    method = declaration
+                    super.visitFunction(declaration)
+                }
+            }
+            override fun visitProperty(declaration: IrProperty) {
+                if (declaration.name.asString() == "PI") {
+                    root[declaration.backingField!!.symbol] = declaration.backingField!!.initializer!!.accept(evaluator, root)
+                }
+            }
+            override fun visitVariable(declaration: IrVariable) {
+                if (declaration.name.asString() == "result") {
+                    result = declaration.initializer!!.accept(evaluator, Context.forMethod(method, root))
+                }
+            }
+        }
+        val program = """
+            object Data {
+                val PI = 3.14
+                fun area(r: Double): Double {
+                    return r*r*PI
+                }
+            }
+            fun main() {
+                val result = Data.area(3.0)
+            }
+        """.trimIndent()
+        val result = compile(
+            sourceFile = SourceFile.kotlin(name = "main.kt", program),
+            plugin = KotlinCompilerPluginRegistrar(visitors = listOf(visitor))
+        )
+        println(visitor.collector.output)
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        assertEquals(9*3.14, visitor.result)
     }
 }

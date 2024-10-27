@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 
 /**
@@ -11,14 +12,11 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
  * Basically a stack frame, except for the root context which contains global static constants.
  * Lambdas keep a reference to the stack context they were created in.
  * Each local context is associated with the corresponding IrFunction declaration (scope).
- * Only assignments to stack variables and constant static fields is allowed.
- *  This is because vars stored on the heap and static mutable vars have indeterminate
- *  values during compile time analysis.
- *  NOTE:   Mutable local variables captured and assigned to in closures are NOT stack variables in this sense.
- *          Local variables captured but never assigned to in closures, on the other hand, are fine.
- *          In fact, this could be extended to any final object field, but object constructors
- *          and virtual method invocations are not interpreted at all, so this bit is irrelevant.
- *          See IrVariable.isStack
+ * Only assignments to immutable variables or variables modified by a single thread are allowed.
+ *  This includes variables allocated on the stack, static immutable variables,
+ *  variables that are captured in closures, but are never assigned to within them.
+ *  It could also include immutable fields, however object constructors and virtual method invocations
+ *  are not interpreted at all here.
  */
 
 class Context(
@@ -59,6 +57,12 @@ class Context(
     }
     fun remove(symbol: IrSymbol) {
         this[symbol] = Evaluator.UnknownValue
+    }
+    fun removeVars() {
+        values.entries.removeIf f@{
+            val owner = it.key.owner as? IrVariable ?: return@f false
+            !owner.isConst
+        }
     }
 
 

@@ -1,16 +1,16 @@
 package com.aleksa.constants
 
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.cli.jvm.plugins.PluginCliParser
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrBreakImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrContinueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
+import org.jetbrains.kotlin.ir.util.isTopLevel
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Unknown
 
 /**
  * Simplify the given expression by replacing parts that can be calculated
@@ -24,8 +24,8 @@ class Replacer(
     private val evaluator: Evaluator = Evaluator()
 ): IrElementTransformer<Context> {
     var pluginContext: IrPluginContext? = null
-    private inner class UnevaluatedMethodException: Exception()
-    private val strictEvaluator = Evaluator{if (evaluator.shouldEvaluate(it)) true else throw UnevaluatedMethodException()}
+    private val strictEvaluator = Evaluator(throwOnUnevaluatedMethod = true, shouldEvaluate = evaluator.shouldEvaluate)
+    private val root = Context()
     /*private fun replace(function: IrFunction, context: Context): IrExpression {
         try {
             val body = function.body
@@ -105,9 +105,10 @@ class Replacer(
                 return createFlowChangeExpression(result, expression) ?: expression
             return assertIrConst(result, expression)
         } //Only replace call if it has 0 side effects
-        catch(e: Context.ImmutabilityException) {}
-        catch(e: UnevaluatedMethodException) {}
-        catch(e: InvalidIrConstValue) {}
+        catch(_: Context.ImmutabilityException) {}
+        catch(_: Evaluator.UnevaluatedMethodException) {}
+        catch(_: Evaluator.EvaluationException) {}
+        catch(_: InvalidIrConstValue) {}
         return expression
     }
 
@@ -130,7 +131,7 @@ class Replacer(
                 return expression
                 //???
             }
-            else if (result is Unknown) {
+            else if (result is Evaluator.Unknown) {
                 branches[i].result = branches[i].result.transform(this, context)
                 context.removeAll(branches[i].assignedSymbols)
                 i++
@@ -162,8 +163,14 @@ class Replacer(
     }
 
     override fun visitWhileLoop(loop: IrWhileLoop, data: Context): IrExpression {
-        // TODO: Not implemented yet
-        return super.visitWhileLoop(loop, data)
+        val context = data.copy()
+        val body = loop.body
+        context.removeAll(loop.condition.assignedSymbols)
+        if (body != null) context.removeAll(body.assignedSymbols)
+        loop.condition = loop.condition.transform(this, context)
+        if (body != null) loop.body = body.transform(this, context)
+        // TODO: Maybe check if the loop can be removed altogether
+        return loop
     }
 
     override fun visitGetValue(expression: IrGetValue, data: Context): IrExpression {
@@ -214,24 +221,59 @@ class Replacer(
                 return createFlowChangeExpression(value, expression) ?: expression
             else return createIrConst(value, expression) ?: expression
         }
-        catch (_: Context.ImmutabilityException) {}
-        catch(_: UnevaluatedMethodException) {}
-        catch(_: InvalidIrConstValue) {}
+        catch (_: Exception) { }
         return expression
+    }
+
+    override fun visitFunction(declaration: IrFunction, data: Context): IrStatement {
+        val context = Context(declaration, data.copy().apply { removeVars() })
+        declaration.transformChildren(this, context)
+        return declaration
+    }
+
+    override fun visitValueParameter(declaration: IrValueParameter, data: Context): IrStatement {
+        declaration.transformChildren(this, data)
+        return declaration
+    }
+    override fun visitProperty(declaration: IrProperty, data: Context): IrStatement {
+        declaration.transformChildren(this, data)
+        val field = declaration.backingField ?: return declaration
+        if (field.isStaticFinal && field.initializer != null)
+            root[field.symbol] = field.initializer!!.accept(evaluator, root)
+        return declaration
+    }
+    override fun visitField(declaration: IrField, data: Context): IrStatement {
+        declaration.transformChildren(this, data)
+        return declaration
+    }
+
+    override fun visitClass(declaration: IrClass, data: Context): IrStatement {
+        declaration.transformChildren(this, data)
+        return declaration
+    }
+
+    override fun visitFile(declaration: IrFile, data: Context): IrFile {
+        //ignoring data because we want to use the same root for all files?
+        declaration.transformChildren(this, root)
+        return declaration
     }
 
     fun createFlowChangeExpression(change: Evaluator.FlowChange, basedOn: IrExpression): IrExpression? {
         val s = basedOn.startOffset
         val e = basedOn.endOffset
-        val noth = pluginContext!!.irBuiltIns.nothingType
+        val n = pluginContext!!.irBuiltIns.nothingType
         if (change is Evaluator.Return) {
             val ret = createIrConst(change.value, basedOn) ?: return null
-            return IrReturnImpl(s, e, noth, change.target, ret)
+            return IrReturnImpl(s, e, n, change.target, ret)
         }
         if (change is Evaluator.Continue)
-            return IrContinueImpl(s, e, noth, change.target)
+            return IrContinueImpl(s, e, n, change.target)
         if (change is Evaluator.Break)
-            return IrBreakImpl(s, e, noth, change.target)
+            return IrBreakImpl(s, e, n, change.target)
         return null
+    }
+
+    private fun say(something: String) {
+        evaluator.messageCollector?.report(CompilerMessageSeverity.INFO, something)
     }
 }

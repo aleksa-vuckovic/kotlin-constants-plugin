@@ -6,8 +6,10 @@ import org.jetbrains.kotlin.ir.backend.js.utils.valueArguments
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetObjectValueImpl
 import org.jetbrains.kotlin.ir.symbols.IrReturnTargetSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.types.classOrFail
 import org.jetbrains.kotlin.ir.util.isLocal
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.isSetter
@@ -35,7 +37,7 @@ fun primitiveClassForName(name: String): KClass<*>? {
 }
 fun assertPrimitiveClassForName(name: String): KClass<*> = primitiveClassForName(name) ?: throw Exception("Can't find primitive class for ${name}")
 
-fun createIrConst(value: Any?, basedOn: IrExpression): IrConst<*>? {
+fun createIrConst(value: Any?, basedOn: IrExpression): IrExpression? {
     val s = basedOn.startOffset
     val e = basedOn.endOffset
     val type = basedOn.type
@@ -48,6 +50,7 @@ fun createIrConst(value: Any?, basedOn: IrExpression): IrConst<*>? {
         is Float -> IrConstImpl(s, e, type, IrConstKind.Float, value)
         is Long -> IrConstImpl(s, e, type, IrConstKind.Long, value)
         is Short -> IrConstImpl(s, e, type, IrConstKind.Short, value)
+        is Unit -> IrGetObjectValueImpl(s, e, type, type.classOrFail)
         null -> IrConstImpl(s, e, type, IrConstKind.Null, null)
         else -> null
     }
