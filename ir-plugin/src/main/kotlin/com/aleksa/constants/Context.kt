@@ -18,7 +18,6 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
  *  It could also include immutable fields, however object constructors and virtual method invocations
  *  are not interpreted at all here.
  */
-
 class Context(
     val scope: IrFunction? = null,
     val parent: Context? = null,

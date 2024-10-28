@@ -30,22 +30,33 @@ fun evalF(value: Double, type: Int): Double {
     }
 }
 
-@OptIn(ExperimentalStdlibApi::class)
-fun main() {
-    //testLog()
-    var x = 10
-    val lambda = { y: Int ->
-        println(x)
+fun test1(): Double {
+    var i = 0
+    var result = 0.0
+    while (true) {
+        result = evalF(10.0, i++)
+        if (result > 50.0 && result < 70.0)
+            break
     }
-    //x = 20
-}
-/*
-fun dumpThis(): Int {
-    val x = 1 + 3
-    val y = 10
-    return x + y
+    return result
 }
 
+fun test2(): Int {
+    val lambda = { x: Int, y: Int, log: Boolean ->
+        if (log)
+            println("Invoked lambda")
+        x + y
+    }
+    val value1 = lambda(1,2,false)
+    val value2 = lambda(3,4,true)
+    return value1+value2
+}
+
+fun main() {
+    //testLog()
+}
+
+/*
 fun testLog() {
     println("In testLog")
     class A {
@@ -62,6 +73,4 @@ fun testLog() {
     a.f("someValue")
     fstatic()
     flambda()
-}
-
-*/
+}*/

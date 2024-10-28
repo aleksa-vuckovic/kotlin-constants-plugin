@@ -13,12 +13,12 @@ import org.jetbrains.kotlin.ir.util.isTopLevel
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 
 /**
- * Simplify the given expression by replacing parts that can be calculated
+ * Simplify the given element by replacing parts that can be calculated
  * at compile time with an IrConst node and return the modified IrExpression.
  * The context passed as argument should be appropriate for the actual context of the statement,
  * and it should contain variable values that are always equal to the give values when the statement is executed,
  * otherwise the replacement can result in nonequivalent code.
- * The context passed is never changed.
+ * The context is not changed, and will be copied if necessary.
  */
 class Replacer(
     private val evaluator: Evaluator = Evaluator()
@@ -26,25 +26,6 @@ class Replacer(
     var pluginContext: IrPluginContext? = null
     private val strictEvaluator = Evaluator(throwOnUnevaluatedMethod = true, shouldEvaluate = evaluator.shouldEvaluate)
     private val root = Context()
-    /*private fun replace(function: IrFunction, context: Context): IrExpression {
-        try {
-            val body = function.body
-                ?: throw EvaluationException("Unexpected null body function (${function.name}).")
-            var result: Any? = Unit
-            for (statement in body.statements)
-                when (statement) {
-                    is IrVariable ->
-                        if (statement.initializer != null)
-                            context[statement.symbol] = evaluate(statement.initializer!!, context)
-                    is IrExpression ->
-                        result = evaluate(statement, context)
-                    //Class and method declarations need no interpreting here
-                }
-            return result
-        } catch (e: Return) {
-            return e.value
-        }
-    }*/
 
     override fun visitElement(element: IrElement, data: Context): IrElement {
         return super.visitElement(element, data)

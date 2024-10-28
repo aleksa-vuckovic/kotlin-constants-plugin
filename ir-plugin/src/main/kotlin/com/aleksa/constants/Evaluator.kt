@@ -34,6 +34,10 @@ import org.jetbrains.kotlin.ir.visitors.acceptVoid
  *  - Creating objects by invoking constructors.
  *  - Virtual method invocation (and, by extension, field access).
  *  - A bunch of other stuff.
+ *
+ *  The result of assigning to nonlocal, nonstatic variables depends on the Context.
+ *      In case of mutable contexts, the assignment will be ignored and the evaluation will continue.
+ *      In case of immutable contexts, an exception will be thrown.
  */
 class Evaluator(
     val messageCollector: MessageCollector? = null,
@@ -41,7 +45,7 @@ class Evaluator(
     val shouldEvaluate: (IrFunction) -> Boolean = {it.body != null && it !is IrConstructor},
 ): IrElementVisitor<Any?, Context> {
 
-    interface FlowChange //A flow change (possible or definite)
+    interface FlowChange //Flow change result (i.e. an executed return, break or continue statement)
     interface Unknown { //Unknown result of evaluation. Might be a flow change, might be a value.
         operator fun plus(change: FlowChange): Unknown = plus(setOf(change))
         operator fun plus(other: Unknown): Unknown = if (other is PossibleFlowChange) plus(other.changes) else this
@@ -298,9 +302,7 @@ class Evaluator(
 
             if (body != null) {
                 var result = body.accept(this, data)
-                say("Evaluation of while body")
                 if (result is PossibleFlowChange) {
-                    say("Got possible flow change data is\n${data.dump()}")
                     var ret = result - loop
                     data.removeAll(loop.condition.assignedSymbols)
                     ret += loop.condition.flowChanges
@@ -318,7 +320,6 @@ class Evaluator(
     }
 
     override fun visitGetValue(expression: IrGetValue, data: Context): Any? {
-        val name = expression.symbol.owner.name.asString()
         return data[expression.symbol]
     }
 
